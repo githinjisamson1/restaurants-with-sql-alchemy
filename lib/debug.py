@@ -3,11 +3,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from models import Game, Review, User
+from models import Restaurant, Customer, Review
 
 if __name__ == '__main__':
 
-    engine = create_engine('sqlite:///many_to_many.db')
+    engine = create_engine('sqlite:///restaurant.db')
     Session = sessionmaker(bind=engine)
     session = Session()
 

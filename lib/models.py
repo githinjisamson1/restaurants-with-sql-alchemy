@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
 from sqlalchemy import create_engine, func
-from sqlalchemy import ForeignKey, Table, Column, Integer, String, DateTime
+from sqlalchemy import ForeignKey, Table, Column, Integer, String, DateTime, desc
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import sessionmaker
 
-Session = sessionmaker()
-session = Session()
-
-engine = create_engine('sqlite:///migrations_test.db')
 
 Base = declarative_base()
+engine = create_engine('sqlite:///restaurant.db')
+
+Session = sessionmaker(bind=engine)
+session = Session()
 
 
 class Restaurant(Base):
@@ -44,6 +44,19 @@ class Restaurant(Base):
     def customers(self):
         return self.customers
 
+    # !AGGREGATE AND RELATIONSHIP METHODS
+    @classmethod
+    def fanciest(cls):
+        return session.query(cls).order_by(desc(cls.price)).first()
+
+    def all_reviews(self):
+        review_list_comprehension = [
+            item.full_review
+            for item in self.reviews
+        ]
+        
+        return review_list_comprehension
+
 
 class Customer(Base):
     # name
@@ -74,6 +87,29 @@ class Customer(Base):
     def restaurants(self):
         return self.restaurants
 
+    # !AGGREGATE AND RELATIONSHIP METHODS
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
+
+    def favorite_restaurant(self):
+        # get customer first
+        customer_high_rating = session.query(Review).filter_by(
+            customer_id=self.customer_id).order_by(desc(Review.star_rating)).first()
+
+        # now return the restaurant
+        return customer_high_rating.restaurants
+
+    def add_review(self, restaurant, rating):
+        review = Review(restaurant, rating)
+        session.add(review)
+        session.commit()
+
+    def delete_reviews(self, restaurant):
+        reviews_to_delete = session.query(Review).filter_by(
+            restaurant_id=restaurant.restaurant_id)
+
+        reviews_to_delete.delete()
+
 
 class Review(Base):
     # name
@@ -100,6 +136,10 @@ class Review(Base):
 
     def restaurant(self):
         return self.restaurant
+
+    # !AGGREGATE AND RELATIONSHIP METHODS
+    def full_review(self):
+        return f"Review for {self.restaurant} by {self.customer.customer()}: {self.star_rating} stars."
 
 
 # !not related to the above
